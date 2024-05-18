@@ -23,5 +23,8 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
    ```bash
    bash install.sh
    
-
+5. For 3D rendering , run the following command :
+ 
+   ```bash
+    pip install git+https://github.com/Improbable-AI/airobot@4c0fe31
    
