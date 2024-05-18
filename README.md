@@ -3,8 +3,9 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
 
 ### Steps
 
-1. Create the conda environment using the provided `environment.yml` file and activate it:
+1. Create the conda environment (rtvs in this case) using the provided `environment.yml` file and activate it:
    ```bash
    conda env create -f environment.yml
    conda activate rtvs
+
    
