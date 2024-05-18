@@ -186,7 +186,8 @@ class Rtvs(BaseRtvs):
 def extract_camera_parameters(cam_k)-> Tuple[float, float, float, float]:
     """
 
-    Function to extracget_action
+    Function to extract camera parameters 
+    |  fx  0   cx |
     |  0  fy   cy |
     |  0   0    1 |
 
