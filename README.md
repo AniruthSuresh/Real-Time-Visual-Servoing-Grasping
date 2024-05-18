@@ -35,12 +35,13 @@ We demonstrate simulations for two cases: linear motion and circular motion of t
 #### 1) Linear Motion Case
 In this case, the belt moves linearly.
 
-![Linear Motion Demo](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/blob/main/assets/137063103/0bf2fe25-1411-4e16-8ae1-978b67647427.gif)
+![linearonline-video-cutter com-ezgif com-video-to-gif-converter](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/assets/137063103/72a05d35-e348-4c68-a842-12ab26c73918)
+
 
 #### 2) Circular Motion Case
 Here, the belt moves in a circular motion.
 
-![Circular Motion Demo](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/blob/main/assets/137063103/630c88d0-c41a-4ec9-89b0-081d0249d9e0.gif)
+![Circular_belt-ezgif com-video-to-gif-converter](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/assets/137063103/630c88d0-c41a-4ec9-89b0-081d0249d9e0)
 
 These simulations illustrate the behavior of the system under different belt motion scenarios. The linear motion case showcases how the system responds to straight-line movements, while the circular motion case demonstrates its behavior when dealing with rotational motion.
 
