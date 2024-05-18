@@ -4,8 +4,8 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
 ### Installation and Setup
 
 1. Make sure to pull submodules by running the following command:
-```bash
-git submodule update --init --recursive
+   ```bash
+   git submodule update --init --recursive
 
 2. Create the conda environment (rtvs in this case) using the provided `environment.yml` file and activate it:
    
