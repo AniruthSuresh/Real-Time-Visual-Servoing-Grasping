@@ -1,0 +1,10 @@
+*.pyc
+.torch
+_ext
+*.o
+work
+work/*
+_ext/
+networks/channelnorm_package
+networks/correlation_package
+networks/resample2d_package

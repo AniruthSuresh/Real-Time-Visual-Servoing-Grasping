@@ -10,7 +10,7 @@ import shutil
 
 from types import SimpleNamespace
 
-from typing import Dict, List
+from typing import Dict, List , Tuple
 
 import numpy as np
 import pybullet as p
@@ -28,6 +28,7 @@ GRASP_TIME = 4
 REPEAT_ACTION = 10
 DRIFT = 0.9
 RENDERING = 0
+
 
 def create_robot(gui: bool, check_realtime : bool , check_render :bool = False):
     """
@@ -86,7 +87,7 @@ class GYM_Robot:
         self.depth_noise = config.get("dnoise", 0)
         self.controller_type = controller_type
 
-        self._set_controller()
+        self.set_RTVS_controller()
 
 
     def _configure_belt_motion(self, init_cfg):
@@ -208,7 +209,7 @@ class GYM_Robot:
     
 
         self.belt.init_pos[2] = self.ground_lvl
-        self._control_belt_motion(0)
+        self.belt_setup_control(0)
 
         # Setting up the basic items in the env 
         self._configure_wall()
@@ -216,9 +217,11 @@ class GYM_Robot:
         self._configure_box()
 
 
+    def set_RTVS_controller(self):
+        """
+        Initialises the RTVS controller
+        """
 
-
-    def _set_controller(self):
         logger.info(controller_type=self.controller_type)
 
         if self.controller_type == "rtvs":
@@ -236,9 +239,12 @@ class GYM_Robot:
             )
 
 
+    def belt_setup_control(self, t=None, dt=None):
+        """
 
-    def _control_belt_motion(self, t=None, dt=None):
-
+        Sets the linear and angular velocity of the belt so 
+        effectively configuring the object position
+        """
         if t is None:
             t = self.sim_time
         if dt is None:
@@ -252,6 +258,10 @@ class GYM_Robot:
 
 
     def get_pos(self, obj):
+        """
+        Check the type of obj and returns the corresponding 
+        position after assigning its ID
+        """
         if isinstance(obj, int):
             obj_id = obj
         elif hasattr(obj, "id"):
@@ -264,9 +274,8 @@ class GYM_Robot:
         Logs the initial positions, velocities, and other relevant information for debugging purposes.
         """
         ee_pos, _, _, ee_euler = self.arm.get_ee_pose()
+
         logger.info(init_belt_pose=self.get_pos(self.belt), belt_vel=self.belt.vel)
-        # to make arm transparent (not works on TINY_RENDERER when getting img)
-        # [ p.changeVisualShape(self.arm.robot_id, i, rgbaColor=[0, 1, 1, 0])   for i in range(-1, 23)]
         logger.info(home_ee_pos=ee_pos, home_ee_euler=ee_euler)
         logger.info(home_jpos=self.arm.get_jpos())
 
@@ -351,7 +360,7 @@ class GYM_Robot:
         change_friction(self.belt.id, 2, 2)
       
 
-        # apply colour or texture 
+        # apply colour or texture -> but not both -> xor !!
         colour_or_texture(self.belt)
         colour_or_texture(self.wall)
 
@@ -391,34 +400,39 @@ class GYM_Robot:
     def sim_time(self):
         return self.step_cnt * self.step_dt
 
-    def step(self, action):
+    def perform_motion(self, action):
+        """
+        Applies the motion corresponding to the velocity obtained and then 
+        appends the belt poses 
+        """
         self.apply_action(action)
         self.belt_poses.append(self.get_pos(self.belt))
 
+
     def apply_action(self, action, use_belt=True):
+        """
+        Perform movements according to the velocity obatined using 
+        DCEM and optical flow depth estimation
+        """
+
         if not isinstance(action, np.ndarray):
             action = np.array(action).flatten()
+
         if action.size != 5:
             raise ValueError(
                 "Action should be [d_x, d_y, d_z, angle, open/close gripper]."
             )
+        
+        # set the position 
         pos = self.ee_pos + action[:3] * self._ee_pos_scale
         pos[2] = max(pos[2], 0.01 + self.conveyor_level)
 
-        # ## NOTE: OVERRIDING EE_ORI for now . Hence action[3] is ignored !!! ####
-        # self.gripper_ori = ang_in_mpi_ppi(np.deg2rad(action[3]))
-        # rot_vec = np.array([0, 0, 1]) * self.gripper_ori
-        # rot_quat = rotvec2quat(rot_vec)
-        # ee_ori = quat_multiply(self.ref_ee_ori, rot_quat)
-        # ee_ori = R.from_euler("xyz", [-np.pi / 2, np.pi, 0]).as_quat()
-        # ee_ori = R.from_euler("xyz", np.deg2rad([-75, 180, 0])).as_quat()
 
-
-        jnt_pos = self.robot.arm.compute_ik(pos, ori=self.ee_home_ori)
+        int_pos = self.robot.arm.compute_ik(pos, ori=self.ee_home_ori) # inverse kinematics 
         gripper_ang = self._scale_gripper_angle(action[4])
 
         for step in range(self.repeat_action):
-            self.arm.set_jpos(jnt_pos, wait=False, ignore_physics=(action[4] != 1))
+            self.arm.set_jpos(int_pos, wait=False, ignore_physics=(action[4] != 1))
             self.robot.arm.eetool.set_jpos(gripper_ang, wait=False)
             if use_belt:
                 p.resetBaseVelocity(self.belt.id, self.belt.vel)
@@ -426,13 +440,14 @@ class GYM_Robot:
             self.step_cnt += 1
         # logger.debug(action_target = pos, action_result = self.ee_pos, delta=(pos-self.ee_pos))
 
+
     def _scale_gripper_angle(self, command):
         """
         Convert the command in [-1, 1] to the actual gripper angle.
         command = -1 means open the gripper.
         command = 1 means close the gripper.
 
-        Args:
+        Parameters:
             command (float): a value between -1 and 1.
                 -1 means open the gripper.
                 1 means close the gripper.
@@ -441,13 +456,15 @@ class GYM_Robot:
             float: the actual gripper angle
             corresponding to the command.
         """
+
         command = clamp(command, -1.0, 1.0)
         close_ang = self.robot.arm.eetool.gripper_close_angle
         open_ang = self.robot.arm.eetool.gripper_open_angle
         cmd_ang = (command + 1) / 2.0 * (close_ang - open_ang) + open_ang
         return cmd_ang
 
-    @property
+
+    @property # wrapper unit 
     def obj_pos(self):
         return self.pb_client.get_body_state(self.box_id)[0]
 
@@ -476,10 +493,28 @@ class GYM_Robot:
     def cam_pos(self):
         ee_base_pos = p.getLinkState(self.arm.robot_id, self.cam_link_anchor_id)[0]
         return ee_base_pos + self.cam_pos_delta
+    
 
-    def render(
-        self, get_rgb=True, get_depth=True, get_seg=True, for_video=True, noise=None
-    ):
+
+    def render(self, get_rgb=True, get_depth=True, get_seg=True, for_video=True, noise=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[float]]:
+        """
+        Renders the setup and returns the rgb, depth, and seg images along with the camera position.
+        
+        Parameters:
+            get_rgb (bool): Flag indicating whether to retrieve the RGB image. Default is True.
+            get_depth (bool): Flag indicating whether to retrieve the depth image. Default is True.
+            get_seg (bool): Flag indicating whether to retrieve the segmentation image. Default is True.
+            for_video (bool): Flag indicating whether the render is for video. Default is True.
+            noise (float or None): Optional parameter specifying the noise level to add to the depth image. Default is None.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray, List[float]]: A tuple containing:
+                - rgb (np.ndarray): The RGB image.
+                - depth (np.ndarray): The depth image.
+                - seg (np.ndarray): The segmentation image.
+                - cam_eye (List[float]): The position of the camera.
+        """
+
         if for_video:
             self.robot.cam.setup_camera(
                 focus_pt=[0, 0, 0.7], dist=1.5, yaw=90, pitch=-40, roll=0
@@ -487,29 +522,52 @@ class GYM_Robot:
         else:
             self.cam.set_cam_ext(pos=self.cam_pos, ori=self.cam_ori)
 
+
         cam_eye = self.cam_pos
         cam_dir = cam_eye + self.rot_matrix.apply([0, 0, 0.1])
         p.addUserDebugLine(cam_dir, cam_eye, [0, 1, 0], 3, 0.5)
+
         rgb, depth, seg = self.cam.get_images(
             get_rgb, get_depth, get_seg, shadow=0, lightDirection=[0, 0, 2]
         )
+        
         if noise is not None:
             depth *= np.random.normal(loc=1, scale=noise, size=depth.shape)
         return rgb, depth, seg, cam_eye
+    
 
     def save_img(self, rgb, t):
+        """
+
+        Function to save the images which can be converted to video 
+        using the makevideo.sh
+        """
         if not self.record_mode:
             return
         ImageSaver.save_rgb(rgb, t)
 
 
-    def run(self):
+
+    def setup_image_directory(self):
+        """
+        Set up the directory for saving images.
+        """
+        if self.record_mode:
+            shutil.rmtree("imgs", ignore_errors=True)
+            os.makedirs("imgs", exist_ok=True)
+
+
+
+    def simulation_run(self):
+        """
+        Main method which gets velocity and performs servoing and grasps 
+        the moving object
+        """
+
         state = {
             "obj_motion": {"motion_type": self.belt.motion_type},
             "cam_int": [],
             "cam_ext": [],
-            # "pcd_3d": [],
-            # "pcd_rgb": [],
             "obj_pos": [],
             "obj_corners": [],
             "ee_pos": [],
@@ -519,6 +577,7 @@ class GYM_Robot:
             "err": [],
             "cam_eye": [],
             "joint_vel": [],
+
             "images": {
                 "rgb": [],
                 "depth": [],
@@ -527,6 +586,8 @@ class GYM_Robot:
             "grasp_time": self.grasp_time,
             "grasp_success": 0,
         }
+
+
         if self.belt.motion_type == "circle":
             state["obj_motion"].update(
                 {
@@ -535,13 +596,20 @@ class GYM_Robot:
                     "w": self.belt.w,
                 }
             )
+
         elif self.belt.motion_type == "linear":
             state["obj_motion"].update({"vel": self.belt.vel})
 
-        def add_to_state(val, *args):
+
+
+        def add_single_to_state(val, *args):
+            """
+            Adds a single parameter to the state dict 
+            """
             if isinstance(val, list) or (
                 isinstance(val, np.ndarray) and val.dtype == np.float64
             ):
+                
                 val = np.asarray(val, np.float32)
             nonlocal state
             list_val = state
@@ -549,28 +617,39 @@ class GYM_Robot:
                 list_val = list_val[arg]
             list_val.append(val)
 
-        def multi_add_to_state(*args):
-            for arg in args:
-                add_to_state(*arg)
 
+        def multi_add_to_state(*args):
+            """
+
+            Adds multiple entries by calling the add_single_to_state
+            """
+            for arg in args:
+                add_single_to_state(*arg)
+
+
+        # start the run here ! 
         logger.info("Run start", obj_pose=self.obj_pos)
         time_steps = 1 / (self.step_dt * self.repeat_action)
 
-        if self.record_mode:
-            shutil.rmtree("imgs", ignore_errors=True)
-            os.makedirs("imgs", exist_ok=True)
+        
+        self.setup_image_directory() # create a folder imgs
+
+
 
         total_sim_time = self.grasp_time + self.post_grasp_duration
-        grasping = False
-        grasping_success = False
+
+        GRASPING = False
+        GRASPING_SUCCESS = False
+
+        # starts the servoing 
         t = 0
+
         while t < int(np.ceil(time_steps * total_sim_time)):
             rgb, depth, seg, cam_eye = self.render(
                 for_video=False, noise=self.depth_noise
             )
-            # pcd_3d, pcd_rgb = self.cam.get_pcd(
-            #     depth_min=-np.inf, depth_max=np.inf, rgb_image=rgb, depth_image=depth
-            # )
+ 
+ 
             multi_add_to_state(
                 (self.obj_pos, "obj_pos"),
                 (self.obj_pos_8, "obj_corners"),
@@ -582,58 +661,74 @@ class GYM_Robot:
                 (rgb, "images", "rgb"),
                 (depth, "images", "depth"),
                 (seg, "images", "seg"),
-                # (pcd_3d, "pcd_3d"),
-                # (pcd_rgb, "pcd_rgb"),
                 (self.cam.get_cam_ext(), "cam_ext"),
                 (self.cam.get_cam_int(), "cam_int"),
             )
 
             self.save_img(rgb, t)
 
-            observations = {
+            # create a new dict -> observation to store the img and current info
+            status_new = {
                 "cur_t": self.sim_time,
                 "ee_pos": self.ee_pos, # ee = end - effector 
             }
 
+
             if self.controller_type == "rtvs":
-                observations["rgb_img"] = rgb
-                observations["depth_img"] = depth
-                observations["prev_rgb_img"] = self.prev_rgb
+                status_new["rgb_img"] = rgb
+                status_new["depth_img"] = depth
+                status_new["prev_rgb_img"] = self.prev_rgb
 
 
-            if self.flowdepth:
-                observations.pop("depth_img")
+            # if flowdepth is True -> we use optical flow to calculate the depth 
+            # so pop this depth image .
+            if self.flowdepth: 
+                status_new.pop("depth_img")
 
-            action, err = self.controller.get_action(observations)
 
-            if not grasping and self.controller.ready_to_grasp:
+            # Get the velocity and the error using flownet !
+            action, iou = self.controller.get_action(status_new)
+            print(f"Velocity is  :{action} and IOU_curr : {iou}")
+
+
+            if not GRASPING and self.controller.ready_to_grasp:
                 logger.debug("Grasping start")
-                grasping = True
+                GRASPING = True
                 total_sim_time = self.sim_time + self.post_grasp_duration
                 self.grasp_time = self.sim_time
                 state["grasp_time"] = self.sim_time
-            multi_add_to_state((action, "action"), (err, "err"))
+
+
+            multi_add_to_state((action, "action"), (iou, "err"))
             logger.info(time=self.sim_time, action=action)
             logger.info(ee_pos=self.ee_pos, obj_pos=self.obj_pos)
+           
             logger.info(
                 dist=np.round(np.linalg.norm(self.ee_pos - self.obj_pos), 3),
-                iou_err=err,
+                iou_err=iou,
             )
-            self._control_belt_motion()
-            self.step(action)
+
+
+            self.belt_setup_control()
+
+            self.perform_motion(action)
+            
             self.prev_rgb = rgb
+
             if (
-                grasping
-                and not grasping_success
+                GRASPING
+                and not GRASPING_SUCCESS
                 and ((self.obj_pos - self.belt.init_pos - self.box.size / 2)[2] > 0.02)
             ):
-                grasping_success = True
+                GRASPING_SUCCESS = True
                 logger.info("Grasping success")
             t += 1
-        state["grasp_success"] = grasping_success
+
+        state["grasp_success"] = GRASPING_SUCCESS
 
         logger.info("Run end", ee_pos=self.ee_pos, obj_pose=self.obj_pos)
         return state
+
 
 
     def __del__(self):

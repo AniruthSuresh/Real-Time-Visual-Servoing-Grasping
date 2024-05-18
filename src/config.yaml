@@ -1,0 +1,15 @@
+log_dir: ../logs/
+gpus: 1
+experiment_name: depth
+val_test_split: [0.2, 0.1]
+batch_size: 8
+n_epochs: 400
+optim:
+  lr: 0.0001
+lr_scheduler:
+  factor: 0.1
+  patience: 2
+  verbose: True
+  threshold: 0.0001
+out_dims: 3
+n_channels: 3

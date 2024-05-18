@@ -25,7 +25,7 @@ def simulate(init_cfg: dict, gui, controller, record: bool, flowdepth: bool):
     Calls the gym setup and sets up the full robot env
     """
     env = GYM_Robot(init_cfg, gui=gui, controller_type=controller, record=record, flowdepth=flowdepth)
-    return env.run()
+    return env.simulation_run() # calls the main method here ! 
 
 
 
@@ -39,6 +39,7 @@ def get_parser():
     # If not provided, default value is "rtvs".
     parser.add_argument("-c","--controller",type=str,default="rtvs",help="controller",)
 
+    parser.add_argument("--dnoise", type=float, default=0, help="depth noise") # add env noise 
 
     parser.add_argument("--random", action="store_true")
 
@@ -115,7 +116,7 @@ def main()-> None:
     args = parser.parse_args()
 
 
-    # initial configuration of the robot -> moves this velocity and at this position
+    # initial configuration of the robot -> moves with this velocity and at this position
     init_cfg = set_initial_position()
 
     # check for circular motion 
