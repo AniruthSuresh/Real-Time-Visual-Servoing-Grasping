@@ -1,0 +1,3 @@
+[submodule "src/controllers/rtvs/src/controllers/rtvs/flownet2-pytorch"]
+	path = src/controllers/rtvs/src/controllers/rtvs/flownet2-pytorch
+	url = https://github.com/VedanshM/flownet2-pytorch.git
