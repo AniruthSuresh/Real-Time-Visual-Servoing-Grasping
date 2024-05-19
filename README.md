@@ -28,11 +28,10 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
    ```bash
     pip install git+https://github.com/Improbable-AI/airobot@4c0fe31
 
-### Explanation of the Project
+#### Explanation of the Project
 
 ![image](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/assets/137063103/f09d22dd-c5a4-41d8-adf4-135916f2d70a)
 
-### Explanation
 
 Our project involves real-time visual servoing and grasping tasks. We perform visual servoing and grasping by capturing the current image and comparing it with the destination image using optical flow techniques.
 
