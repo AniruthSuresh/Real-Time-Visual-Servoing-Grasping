@@ -3,7 +3,7 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
 
 ### Installation and Setup
 
-1. Make sure to pull submodules by running the following command:
+1. Make sure to pull submodules after cloning it by running the following command:
    ```bash
    git submodule update --init --recursive
 
@@ -27,6 +27,11 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
  
    ```bash
     pip install git+https://github.com/Improbable-AI/airobot@4c0fe31
+
+6. To run the simulation :
+   ```bash
+   cd src
+   python3 grasp.py --gui
 
 #### Explanation of the Project
 
