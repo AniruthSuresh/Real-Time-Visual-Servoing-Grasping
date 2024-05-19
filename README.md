@@ -68,11 +68,11 @@ Here, the belt moves in a circular motion.
 
 ![Circular_belt-ezgif com-video-to-gif-converter](https://github.com/AniruthSuresh/Real-Time-Visual-Servoing-Grasping/assets/137063103/630c88d0-c41a-4ec9-89b0-081d0249d9e0)
 
+
+These simulations illustrate the behavior of the system under different belt motion scenarios. The linear motion case showcases how the system responds to straight-line movements, while the circular motion case demonstrates its behavior when dealing with rotational motion.
+
 ### Note: Model Availability
 
 In this project repository, the `flownet2` model is not readily available due to its large size. Therefore, it's crucial to generate the `flownet2` model separately and add it to the data directory before proceeding with the project setup.
-
-
-These simulations illustrate the behavior of the system under different belt motion scenarios. The linear motion case showcases how the system responds to straight-line movements, while the circular motion case demonstrates its behavior when dealing with rotational motion.
 
 
