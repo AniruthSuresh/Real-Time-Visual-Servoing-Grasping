@@ -13,7 +13,7 @@ This project implements a Real-Time Visual Servoing framework that uses optical 
    conda env create -f environment.yml
    conda activate rtvs
 
-3. Navigate to src/controllers/rtvs/flownet2-pytorch/networks/resample2d_package/ and run the following commands
+3. Navigate to ```src/controllers/rtvs/flownet2-pytorch/networks/resample2d_package/``` and run the following commands
    
    ```bash
    python3 setup.py build
