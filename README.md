@@ -52,7 +52,6 @@ DCEM is a stochastic optimization algorithm commonly used for reinforcement lear
 #### Controller Velocity Adjustment:
 The predicted flow loss obtained from the neural network is compared with the actual flow loss. Based on this comparison, the velocity commands sent to the controller are adjusted to minimize the discrepancy between the predicted and actual values. This ensures precise and robust control of the robot's movements during visual servoing and grasping operations.
 
-
 ### Demo
 
 We demonstrate simulations for two cases: linear motion and circular motion of the belt.
